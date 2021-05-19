@@ -1,0 +1,89 @@
+Developing Data Products Course Project
+========================================================
+author: tmxiang
+date: 5/19/21
+width: 1440
+height: 1100
+
+Overview
+========================================================
+
+This project showcases a Shiny application with linear regression models of the US income in 1974, which will vary depending on the predictor variable used. The application uses the `state.77` from the *US State Facts and Figures* dataset in the R datasets package.
+
+* The user will chose a variable from a dropdown box to use as predictor for the US income.
+
+* The application will display the linear regression model and regression coefficients after user input
+
+For more information on the Shiny application, please see:
+
+1. Shiny App: https://aiyrui.shinyapps.io/rShinyApp/
+
+2. UI/Server code: https://github.com/Aiyrui/Developing-Data-Products-ShinyApp
+
+UI Code
+========================================================
+
+```{r, }
+library(shiny)
+state <- data.frame(state.x77)
+shinyUI(fluidPage(
+    titlePanel("US Income in 1974"),
+    sidebarLayout(
+        sidebarPanel(
+            selectInput("variable", "Predictor Variable:",
+                        choices = colnames(state))
+        ),
+        mainPanel(
+            h2(textOutput("plotTitle")),
+            plotOutput("plot"),
+            h3("Regression Coefficients"),
+            tableOutput("coeff")
+        )
+    )
+))
+```
+
+Server Code
+========================================================
+
+```{r}
+library(shiny)
+state <- data.frame(state.x77)
+shinyServer(function(input, output) {
+    fitFormula <- reactive({
+        xInput <- input$variable
+        paste("state$Income ~", "as.integer(state$",xInput,")")
+        })
+    fit <- reactive({
+        lm(as.formula(fitFormula()), data = state)
+    })
+    caption <- reactive({
+        paste(input$variable, "as Predictor")
+    })
+    output$plotTitle <- renderText({
+        caption()
+    })
+    lmCoeff <- reactive({
+        as.data.frame(summary(fit())$coefficients, row.names = c("Intercept", input$variable))
+    })
+    output$coeff <- renderTable({
+        lmCoeff()
+    }, rownames = TRUE)
+    output$plot <- renderPlot({
+        plot(as.formula(fitFormula()), xlab = input$variable, ylab = "Income")
+        abline(fit(), col = "red")
+    })
+})
+```
+
+Application Output
+========================================================
+
+A sample output of the application is:
+
+```{r, echo=FALSE}
+fit <- lm(Income ~ Population, data = state)
+plot(state$Income ~ state$Population, xlab = "Population", ylab = "Income")
+abline(fit, col = "red")
+summary(fit)$coefficients
+```
